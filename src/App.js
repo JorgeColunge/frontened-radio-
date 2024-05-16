@@ -1,4 +1,4 @@
-import 'bootstrap/dist/css/bootstrap.min.css'; // Importa Bootstrap CSS
+import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Login from "./Login";
@@ -8,8 +8,7 @@ import UsersMap from "./ControlPage";
 import UserPage from "./components/UserPage";
 import UserList from './components/UserList';
 import ChatBot from './components/ChatBot';
-import RequestTaxiDriver from './components/App-driver/RequestTaxiDriver'
-
+import RequestTaxiDriver from './components/App-driver/RequestTaxiDriver';
 
 import socket from './Socket'; // Importa la instancia del socket
 
@@ -44,5 +43,3 @@ function App() {
 }
 
 export default App;
-
-
