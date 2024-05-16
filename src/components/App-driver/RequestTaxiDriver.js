@@ -46,7 +46,7 @@ const RequestTaxiDriver = () => {
     };
 
     try {
-      const response = await axios.post('https://192.168.1.82:7000/api/geolocation/accept-taxi-request', acceptTaxiData);
+      const response = await axios.post('https://backend-k3yb.onrender.com/api/geolocation/accept-taxi-request', acceptTaxiData);
       console.log('Respuesta de la aceptación del taxi:', response.data);
       setPendingRequests((prevRequests) => prevRequests.filter((_, i) => i !== index)); // Elimina la solicitud aceptada
     } catch (error) {
