@@ -16,7 +16,7 @@ const TaxiRequestButton = () => {
       };
   
       try {
-        const response = await axios.post('https://192.168.1.7:7000/api/geolocation/taxi-request', taxiRequestData);
+        const response = await axios.post('https://backend-k3yb.onrender.com/api/geolocation/taxi-request', taxiRequestData);
 
         console.log('Respuesta de la solicitud de taxi:', response.data);
       } catch (error) {
