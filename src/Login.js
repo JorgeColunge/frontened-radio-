@@ -60,7 +60,6 @@ const Login = () => {
       <input type="password" value={password} onChange={(e) => setpassword(e.target.value)} />
     </label>
     <input type="submit" value="Iniciar sesión" className="btn btn-primary" />
-    <Link to="/register">   ¿No tienes cuenta? Regístrate</Link>
     </form>
   </div>
   );
