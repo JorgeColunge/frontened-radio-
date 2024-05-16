@@ -102,3 +102,5 @@ const RequestTaxiDriver = () => {
     </>
   );
 };
+
+export default RequestTaxiDriver;
