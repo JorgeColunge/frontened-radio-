@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faUsers, faTaxi, faGlobe } from '@fortawesome/free-solid-svg-icons';
 import MapComponent from './components/MapComponent';
 import socket from './Socket';
+import LogoutButton from './LogoutButton';
 
 const HomePage = () => {
   const id_usuario = localStorage.getItem('id_usuario');
@@ -47,7 +48,7 @@ const HomePage = () => {
           <Link to="/map" style={iconLinkStyle} className="btn btn-success ml-2">
             <FontAwesomeIcon icon={faGlobe} />
           </Link>
-
+          <LogoutButton /> {/* Añade el botón de logout */}
         </div>
       </div>
       <div className="row">
