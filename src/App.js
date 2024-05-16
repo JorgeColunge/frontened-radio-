@@ -8,6 +8,8 @@ import UsersMap from "./ControlPage";
 import UserPage from "./components/UserPage";
 import UserList from './components/UserList';
 import ChatBot from './components/ChatBot';
+import RequestTaxiDriver from './components/App-driver/RequestTaxiDriver'
+
 
 import socket from './Socket'; // Importa la instancia del socket
 
@@ -35,6 +37,7 @@ function App() {
         <Route path="/user" element={<UserPage />} />
         <Route path="/users-list" element={<UserList />} />
         <Route path="/chat" element={<ChatBot />} />
+        <Route path="/request-taxi" element={<RequestTaxiDriver />} />
       </Routes>
     </Router>
   );

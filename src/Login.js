@@ -30,9 +30,18 @@ const Login = () => {
     localStorage.setItem("token", response.data.token);
     localStorage.setItem("id_usuario", id_usuario);
     socket.emit('registerUser', id_usuario);
-    navigate('/home');
+
+    // Redirección basada en el tipo de usuario
+    if (response.data.tipo === 'tipo1') {
+      navigate('/home');
+    } else if (response.data.tipo === 'tipo2') {
+      navigate('/request-taxi');
+    } else {
+      setError("Tipo de usuario no reconocido.");
+    }
+
   } catch (error) {
-    const errorMsg = error.response ? "Error al iniciar sesión. Intente nuevamente." : "Error de red o respuesta no recibida.";
+    const errorMsg = error.response ? error.response.data : "Error de red o respuesta no recibida.";
     setError(errorMsg);
   }
   };
