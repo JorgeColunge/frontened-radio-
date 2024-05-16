@@ -1,6 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import Login from "./Login";
 import Register from "./Register";
 import HomePage from "./HomePage";
@@ -28,33 +28,34 @@ function App() {
   }, []);
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    window.addEventListener('popstate', () => {
+    const handlePopState = (event) => {
       const token = localStorage.getItem('token');
-      if (token) {
+      if (token && location.pathname === '/') {
         navigate('/home');
       }
-    });
+    };
+
+    window.addEventListener('popstate', handlePopState);
 
     return () => {
-      window.removeEventListener('popstate', () => {});
+      window.removeEventListener('popstate', handlePopState);
     };
-  }, [navigate]);
+  }, [navigate, location]);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/home" element={<RequireAuth><HomePage /></RequireAuth>} />
-        <Route path="/map" element={<RequireAuth><UsersMap /></RequireAuth>} />
-        <Route path="/user" element={<RequireAuth><UserPage /></RequireAuth>} />
-        <Route path="/users-list" element={<RequireAuth><UserList /></RequireAuth>} />
-        <Route path="/chat" element={<RequireAuth><ChatBot /></RequireAuth>} />
-        <Route path="/request-taxi" element={<RequireAuth><RequestTaxiDriver /></RequireAuth>} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/home" element={<RequireAuth><HomePage /></RequireAuth>} />
+      <Route path="/map" element={<RequireAuth><UsersMap /></RequireAuth>} />
+      <Route path="/user" element={<RequireAuth><UserPage /></RequireAuth>} />
+      <Route path="/users-list" element={<RequireAuth><UserList /></RequireAuth>} />
+      <Route path="/chat" element={<RequireAuth><ChatBot /></RequireAuth>} />
+      <Route path="/request-taxi" element={<RequireAuth><RequestTaxiDriver /></RequireAuth>} />
+    </Routes>
   );
 }
 
