@@ -10,7 +10,7 @@ function UserList() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('https://backend-k3yb.onrender.com/api/auth/users', { // Asegúrate de usar la URL correcta
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/users`, { // Asegúrate de usar la URL correcta
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

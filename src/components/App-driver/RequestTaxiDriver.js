@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import socket from '../../Socket'; // Asegúrate de que la ruta es correcta
+import socket from '../../Socket';
 import { Modal, Button } from 'react-bootstrap';
 
 const RequestTaxiDriver = () => {
@@ -42,11 +42,11 @@ const RequestTaxiDriver = () => {
   const handleAccept = async (request, index) => {
     const acceptTaxiData = {
       id_viaje: request.viajeId,
-      id_taxista: 'tu_id_taxista', // Asegúrate de proporcionar el ID del taxista correcto
+      id_taxista: localStorage.getItem('id_usuario'), // Asegúrate de proporcionar el ID del taxista correcto
     };
 
     try {
-      const response = await axios.post('https://backend-k3yb.onrender.com/api/geolocation/accept-taxi-request', acceptTaxiData);
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/geolocation/accept-taxi-request`, acceptTaxiData);
       console.log('Respuesta de la aceptación del taxi:', response.data);
       setPendingRequests((prevRequests) => prevRequests.filter((_, i) => i !== index)); // Elimina la solicitud aceptada
     } catch (error) {

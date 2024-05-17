@@ -17,7 +17,7 @@ function UserPage() {
             const id_usuario = localStorage.getItem('id_usuario');
             if (id_usuario) {
                 try {
-                    const response = await axios.get(`https://backend-k3yb.onrender.com/api/auth/user/${id_usuario}`);
+                    const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/auth/user/${id_usuario}`);
                     if (response.data) {
                         setUser(prevState => ({
                             ...prevState,

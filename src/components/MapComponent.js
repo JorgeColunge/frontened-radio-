@@ -62,7 +62,7 @@ const MapComponent = ({ id_usuario }) => {
 
   function sendLocationToServer(latitude, longitude) {
     const payload = { id_usuario, latitude, longitude };
-    axios.post('https://backend-k3yb.onrender.com/api/geolocation/update-location', payload)
+    axios.post(`${process.env.REACT_APP_API_URL}/api/geolocation/update-location`, payload)
       .then(response => {
         console.log("Respuesta del servidor:", response.data);
       })
@@ -121,7 +121,7 @@ const MapComponent = ({ id_usuario }) => {
     };
   
     try {
-      const response = await axios.post('https://backend-k3yb.onrender.com/api/geolocation/accept-taxi-request', acceptTaxiData);
+      const response = await axios.post('${process.env.REACT_APP_API_URL}/api/geolocation/accept-taxi-request', acceptTaxiData);
       console.log('Respuesta de la aceptación del taxi:', response.data);
       setShowNotification(true); // Muestra la notificación de asignación
       setTimeout(() => {

@@ -1,32 +1,124 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faUsers, faTaxi, faGlobe } from '@fortawesome/free-solid-svg-icons';
-import MapComponent from './components/MapComponent';
+import axios from 'axios';
 import socket from './Socket';
 import LogoutButton from './LogoutButton';
+import RequestTaxiDriver from './components/App-driver/RequestTaxiDriver';
+import { Modal, Button } from 'react-bootstrap';
 
 const HomePage = () => {
   const id_usuario = localStorage.getItem('id_usuario');
+  const tipo_usuario = localStorage.getItem('tipo_usuario');
+  const googleMapRef = useRef(null);
+  const [googleMap, setGoogleMap] = useState(null);
+  const [markers, setMarkers] = useState([]);
 
   useEffect(() => {
-    console.log('Socket conectado en HomePage:', socket.connected);
-  }, []);
+    socket.connect();
 
-  // Styles
-  const iconsContainerStyle = {
-    position: 'absolute',
-    top: '20px',
-    right: '20px',
-    display: 'flex',
-    alignItems: 'center',
-    zIndex: 1000 // Ensure icons are above the map
+    if (tipo_usuario === 'tipo2') {
+      navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          socket.emit('updateLocation', { id_usuario, latitude, longitude });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        }
+      );
+    } else if (tipo_usuario === 'tipo1') {
+      socket.on('locationUpdated', (location) => {
+        updateMarkers(location);
+      });
+    }
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id_usuario, tipo_usuario]);
+
+  useEffect(() => {
+    if (tipo_usuario === 'tipo1') {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`;
+      script.async = true;
+      script.defer = true;
+      window.initMap = initializeGoogleMap;
+      document.head.appendChild(script);
+
+      return () => {
+        document.head.removeChild(script);
+      };
+    }
+  }, [tipo_usuario]);
+
+  const initializeGoogleMap = () => {
+    const map = new window.google.maps.Map(googleMapRef.current, {
+      center: { lat: -34.397, lng: 150.644 },
+      zoom: 15,
+    });
+    setGoogleMap(map);
+    fetchUserLocations(map);
   };
 
-  const iconLinkStyle = {
-    marginLeft: '10px', // Space between icons
-    color: 'black', // Icon color
-    fontSize: '24px' // Icon size
+  const fetchUserLocations = async (map) => {
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/users`);
+      updateMarkers(response.data, map);
+    } catch (error) {
+      console.error('Error fetching user locations:', error);
+    }
+  };
+
+  const updateMarkers = (location, map = googleMap) => {
+    const { id_usuario, latitude, longitude } = location;
+
+    let marker = markers.find((marker) => marker.id_usuario === id_usuario);
+
+    if (marker) {
+      marker.setPosition(new window.google.maps.LatLng(latitude, longitude));
+    } else {
+      marker = new window.google.maps.Marker({
+        position: { lat: latitude, lng: longitude },
+        map: map,
+        icon: {
+          url: '/imagenes/car_topview.svg',
+          scaledSize: new window.google.maps.Size(40, 40),
+        },
+      });
+      marker.id_usuario = id_usuario;
+      setMarkers((prevMarkers) => [...prevMarkers, marker]);
+    }
+  };
+
+  const renderContentByUserType = () => {
+    if (tipo_usuario === 'tipo1') {
+      return (
+        <div className="row">
+          <div className="col-md-12" style={{ height: '85vh' }}>
+            <div ref={googleMapRef} style={{ height: '100%', width: '100%' }} />
+          </div>
+        </div>
+      );
+    } else if (tipo_usuario === 'tipo2') {
+      return (
+        <div className="row">
+          <div className="col-md-12">
+            <h2>Solicitudes de Taxi</h2>
+            <RequestTaxiDriver />
+          </div>
+        </div>
+      );
+    } else {
+      return <p>Tipo de usuario no reconocido.</p>;
+    }
   };
 
   return (
@@ -42,41 +134,16 @@ const HomePage = () => {
           <Link to="/users-list" className="btn btn-secondary ml-2">
             <FontAwesomeIcon icon={faUsers} size="lg" />
           </Link>
-          <Link to="/chat" style={iconLinkStyle} className="btn btn-success ml-2">
+          <Link to="/chat" className="btn btn-success ml-2">
             <FontAwesomeIcon icon={faTaxi} />
           </Link>
-          <Link to="/map" style={iconLinkStyle} className="btn btn-success ml-2">
+          <Link to="/map" className="btn btn-success ml-2">
             <FontAwesomeIcon icon={faGlobe} />
           </Link>
-          <LogoutButton /> {/* Añade el botón de logout */}
+          <LogoutButton />
         </div>
       </div>
-      <div className="row">
-        <div className="col-md-8" style={{ height: '85vh' }}>
-          <MapComponent id_usuario={id_usuario} />
-        </div>
-        <div className="col-md-4">
-          <form>
-            <div className="form-group">
-              <label htmlFor="originAddress">Dirección origen</label>
-              <input type="text" className="form-control" id="originAddress" placeholder="Ingresa la dirección de origen" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="destinationAddress">Dirección destino</label>
-              <input type="text" className="form-control" id="destinationAddress" placeholder="Ingresa la dirección de destino" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="price">Precio</label>
-              <input type="number" className="form-control" id="price" placeholder="Precio de la carrera" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="rate">Tarifa normal</label>
-              <input type="text" className="form-control" id="rate" placeholder="Tarifa aplicada" />
-            </div>
-            <button type="submit" className="btn btn-primary">Solicitar Taxi</button>
-          </form>
-        </div>
-      </div>
+      {renderContentByUserType()}
     </div>
   );
 };

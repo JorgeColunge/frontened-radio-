@@ -12,7 +12,7 @@ const UsersMap = () => {
 
     useEffect(() => {
         // Inicializar Socket.IO
-        socket = io('https://backend-k3yb.onrender.com');
+        socket = io(`${process.env.REACT_APP_API_URL}`);
 
         socket.on('connect', () => {
             console.log('Conexión Socket.IO establecida');
@@ -61,7 +61,7 @@ const UsersMap = () => {
 
     const fetchUserLocations = async () => {
         try {
-            const response = await axios.get('https://backend-k3yb.onrender.com/api/geolocation/users');
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/users`);
             updateMarkers(response.data);
         } catch (error) {
             console.error("Error fetching user locations: ", error);
