@@ -264,7 +264,7 @@ const MapComponent = ({ id_usuario }) => {
           />
           <Marker position={location} icon={taxiIcon}>
             <Popup>
-              Tu ubicación
+              Tu ubicación.
             </Popup>
           </Marker>
           {showClientInfo && (
