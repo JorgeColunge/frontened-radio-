@@ -249,7 +249,7 @@ const MapComponent = ({ id_usuario }) => {
       <hr style={{ borderTop: '2px solid gray', width: '100%' }} />
 
       <div className="text-center mt-3">
-        <h3>{accepted ? "Recorrido del viaje" : (pendingRequests.length > 0 ? "Viajes" : "No hay solicitudes de taxis en este momento")}</h3>
+        <h3>{accepted ? "Recorrido del viaje" : (pendingRequests.length > 0 ? "Viajes" : "No hay solicitudes de taxis en este momento.")}</h3>
       </div>
 
       {showMap && location && (
