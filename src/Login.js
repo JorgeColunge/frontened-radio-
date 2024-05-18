@@ -1,9 +1,8 @@
-// src/Login.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import socket from './Socket';
-import './login.css'; // Asegúrate de importar el CSS
+import './login.css'; 
 
 const Login = () => {
   const [id_usuario, setIdUsuario] = useState("");

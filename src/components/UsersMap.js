@@ -1,14 +1,15 @@
 import { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import io from 'socket.io-client';
 
-let googleMapScript;
-let googleMap;
-let markers = []; // Almacenar los marcadores
 let socket;
+let markers = {}; // Almacenar los marcadores
 
 const UsersMap = () => {
-    const googleMapRef = useRef();
+    const mapRef = useRef();
+    const mapInstance = useRef(null);
 
     useEffect(() => {
         // Inicializar Socket.IO
@@ -23,46 +24,39 @@ const UsersMap = () => {
         });
 
         // Escuchar actualizaciones de ubicación
-        socket.on('locationUpdated', (updatedLocations) => {
-            console.log('Ubicaciones actualizadas:', updatedLocations);
-            updateMarkers(updatedLocations);
+        socket.on('locationUpdated', (updatedLocation) => {
+            console.log('Ubicaciones actualizadas:', updatedLocation);
+            if (Array.isArray(updatedLocation)) {
+                updatedLocation.forEach(location => updateMarkers(location));
+            } else {
+                updateMarkers(updatedLocation);
+            }
         });
 
-        // Agregar el script de Google Maps
-        if (!document.querySelector('#google-maps-script')) {
-            googleMapScript = document.createElement('script');
-            googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`;
-            googleMapScript.async = true;
-            googleMapScript.defer = true;
-            googleMapScript.id = 'google-maps-script';
-            window.document.body.appendChild(googleMapScript);
-            window.initMap = initializeGoogleMap;
-        } else {
-            if (!window.google) {
-                window.initMap = initializeGoogleMap;
-            } else {
-                initializeGoogleMap();
-            }
+        // Inicializar el mapa solo si aún no ha sido inicializado
+        if (!mapInstance.current) {
+            mapInstance.current = L.map(mapRef.current).setView([1.2146412737375492, -77.27825044479697], 15);
+
+            // Añadir capa de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(mapInstance.current);
+
+            // Fetch initial user locations
+            fetchUserLocations();
         }
 
         return () => {
-            socket.disconnect(); // Desconectar Socket.IO al desmontar el componente
+            if (socket) {
+                socket.disconnect(); // Desconectar Socket.IO al desmontar el componente
+            }
         };
     }, []);
-
-    const initializeGoogleMap = () => {
-        googleMap = new window.google.maps.Map(googleMapRef.current, {
-            center: { lat: -34.397, lng: 150.644 },
-            zoom: 15,
-        });
-
-        fetchUserLocations();
-    };
 
     const fetchUserLocations = async () => {
         try {
             const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/users`);
-            updateMarkers(response.data);
+            response.data.forEach(location => updateMarkers(location));
         } catch (error) {
             console.error("Error fetching user locations: ", error);
         }
@@ -70,30 +64,31 @@ const UsersMap = () => {
 
     const updateMarkers = (location) => {
         const { id_usuario, latitude, longitude } = location;
-    
-        // Buscar si ya existe un marcador para este usuario
-        let marker = markers.find(marker => marker.id_usuario === id_usuario);
-    
-        if (marker) {
+        console.log('Actualizando marcador para:', id_usuario, latitude, longitude);
+
+        // Verifica que latitud y longitud sean números
+        if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+            console.error('Latitud o longitud no son números:', latitude, longitude);
+            return;
+        }
+
+        if (markers[id_usuario]) {
             // Si el marcador ya existe, actualizar su posición
-            marker.setPosition(new window.google.maps.LatLng(latitude, longitude));
+            markers[id_usuario].setLatLng([latitude, longitude]);
         } else {
             // Si el marcador no existe, crear uno nuevo y añadirlo al mapa
-            marker = new window.google.maps.Marker({
-                position: { lat: latitude, lng: longitude },
-                map: googleMap,
-            });
-            marker.id_usuario = id_usuario; // Guardar el id del usuario en el marcador para futuras referencias
-            markers.push(marker); // Añadir el marcador al arreglo de marcadores
+            const marker = L.marker([latitude, longitude], {
+                icon: L.icon({
+                    iconUrl: '/imagenes/car_topview.svg', // Asegúrate de que la ruta a la imagen es correcta
+                    iconSize: [40, 40], // Dimensiones del icono
+                    iconAnchor: [20, 20], // Anclar el icono al centro
+                })
+            }).addTo(mapInstance.current);
+            markers[id_usuario] = marker; // Guardar el marcador en el diccionario de marcadores
         }
     };
-        
 
-    return <div ref={googleMapRef} style={{ height: '500px', width: '100%' }} />;
+    return <div ref={mapRef} style={{ height: '500px', width: '100%' }} />;
 };
- 
-  export default UsersMap;
 
-
-
-  
+export default UsersMap;
