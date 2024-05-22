@@ -6,6 +6,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { Person, People, ChatDots, Calendar, FileText } from 'react-bootstrap-icons';
 import LogoutButton from './LogoutButton';
 import { Modal, Button, Form } from 'react-bootstrap';
+import Navbar from './Navbar';
 
 function UserPage() {
     const [user, setUser] = useState({
@@ -78,40 +79,10 @@ function UserPage() {
     };
 
     return (
-        <div className="container-fluid">
-            <div className="row align-items-center justify-content-between" style={{ padding: '20px' }}>
-                <div className="col-auto">
-                    <Link to="/home">
-                    <img src={"/imagenes/Logo.jpg"} alt="Logo" style={{ width: '250px', marginRight: '20px' }} />
-                    </Link>
-                </div>
-                <div className="col-auto d-flex align-items-center">
-                    <Link to="/user" className="btn btn-link text-dark">
-                    <Person size={30} />
-                    </Link>
-                    {tipoUsuario === 'tipo1' && (
-                    <>
-                        <Link to="/users-list" className="btn btn-link text-dark ml-2">
-                        <People size={30} />
-                        </Link>
-                        <Link to="/chat" className="btn btn-link text-dark ml-2">
-                        <ChatDots size={30} />
-                        </Link>
-                        <Link to="/historial-viajes" className="btn btn-link text-dark ml-2">
-                        <Calendar size={30} />
-                        </Link>
-                    </>
-                    )}
-                    {tipoUsuario === 'tipo2' && (
-                    <Link to="/historial-mis-viajes" className="btn btn-link text-dark ml-2">
-                        <FileText size={30} />
-                    </Link>
-                    )}
-                    <LogoutButton className="btn btn-warning ml-2" />
-                </div>
-            </div>
+        <div className="container-fluid contenido">
+            <Navbar />
             <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '5px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', backgroundColor: '#fff' }}>
-                <h1 style={{ textAlign: 'center', color: '#333' }}>Información del {user.tipo}</h1>
+                <h1 style={{ textAlign: 'center', color: '#333' }}>Información de {user.nombre}</h1>
                 <div style={{ textAlign: 'center', marginTop: '20px' }}>
                     {user.foto && <img src={user.foto} alt="Foto del usuario" style={{ width: '150px', height: '150px', borderRadius: '75px', objectFit: 'cover', marginBottom: '20px' }} />}
                 </div>

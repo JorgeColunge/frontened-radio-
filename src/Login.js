@@ -41,20 +41,28 @@ const Login = () => {
   };
 
   return (
+    <div className="login-body">
     <div className="login-form">
+      <div className="icon-circle">
+        <img src="/RTIcon.png" alt="App Icon" />
+      </div>
+      {error && <p className="error-message">{error}</p>}
       <form onSubmit={handleSubmit}>
-        {error && <p className="error-message">{error}</p>}
-        <h2 style={{ textAlign: 'center', fontWeight: 'bold' }}>Radio-taxis</h2>
-        <label>
-          ID de usuario:
-          <input type="text" value={id_usuario} onChange={(e) => setIdUsuario(e.target.value)} />
-        </label>
-        <label>
-          Contraseña:
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
+        <input
+          type="text"
+          placeholder="ID de usuario"
+          value={id_usuario}
+          onChange={(e) => setIdUsuario(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
         <input type="submit" value="Iniciar sesión" className="btn btn-primary" />
       </form>
+    </div>
     </div>
   );
 };

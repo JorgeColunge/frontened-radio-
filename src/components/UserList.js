@@ -5,6 +5,8 @@ import LogoutButton from './LogoutButton';
 import axios from 'axios';
 import { Modal, Button, Form } from 'react-bootstrap';
 import socket from '../Socket';
+import Navbar from './Navbar';
+import '../home.css';
 
 function UserList() {
   const [users, setUsers] = useState([]);
@@ -117,38 +119,8 @@ function UserList() {
   };
 
   return (
-    <div className="container-fluid">
-      <div className="row align-items-center justify-content-between" style={{ padding: '20px' }}>
-                <div className="col-auto">
-                    <Link to="/home">
-                    <img src={"/imagenes/Logo.jpg"} alt="Logo" style={{ width: '250px', marginRight: '20px' }} />
-                    </Link>
-                </div>
-                <div className="col-auto d-flex align-items-center">
-                    <Link to="/user" className="btn btn-link text-dark">
-                    <Person size={30} />
-                    </Link>
-                    {tipoUsuario === 'tipo1' && (
-                    <>
-                        <Link to="/users-list" className="btn btn-link text-dark ml-2">
-                        <People size={30} />
-                        </Link>
-                        <Link to="/chat" className="btn btn-link text-dark ml-2">
-                        <ChatDots size={30} />
-                        </Link>
-                        <Link to="/historial-viajes" className="btn btn-link text-dark ml-2">
-                        <Calendar size={30} />
-                        </Link>
-                    </>
-                    )}
-                    {tipoUsuario === 'tipo2' && (
-                    <Link to="/historial-mis-viajes" className="btn btn-link text-dark ml-2">
-                        <FileText size={30} />
-                    </Link>
-                    )}
-                    <LogoutButton className="btn btn-warning ml-2" />
-                </div>
-            </div>
+    <div className="container-fluid contenido">
+      <Navbar />
       <div className="container mt-5">
         <h1 className="mb-3">Lista de Conductores</h1>
         <button onClick={() => { setShowModal(true); setEditingUser(null); setNewUser({ id_usuario: '', nombre: '', tipo: '', password: '', telefono: '', navegacion: 'google_maps', placa: '', foto: null }); }} className="btn btn-warning mb-3">Agregar Usuario</button>
@@ -247,52 +219,54 @@ function UserList() {
           </Modal.Body>
         </Modal>
 
-        <table className="table table-striped text-center">
-          <thead>
-            <tr>
-              <th>Foto</th>
-              <th>ID</th>
-              <th>
-                Nombre 
-                <ArrowUp onClick={() => requestSort('nombre')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
-                <ArrowDown onClick={() => requestSort('nombre')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
-              </th>
-              <th>
-                Tipo 
-                <ArrowUp onClick={() => requestSort('tipo')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
-                <ArrowDown onClick={() => requestSort('tipo')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
-              </th>
-              <th>
-                Estado 
-                <ArrowUp onClick={() => requestSort('socket_id')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
-                <ArrowDown onClick={() => requestSort('socket_id')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
-              </th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.id_usuario}>
-                <td><img src={`/${user.foto}`} alt={user.nombre} style={{ width: '50px', height: '50px', borderRadius: '50%' }} /></td>
-                <td>{user.id_usuario}</td>
-                <td>{user.nombre}</td>
-                <td>{user.tipo === 'tipo1' ? 'Operador' : 'Conductor'}</td>
-                <td>
-                  <span style={{ color: user.socket_id ? 'green' : 'red' }}>
-                    ●
-                  </span>
-                </td>
-                <td>
-                  <PencilSquare onClick={() => handleEdit(user)} style={{ cursor: 'pointer', marginRight: '10px' }} />
-                  <Trash onClick={() => handleDelete(user.id_usuario)} style={{ cursor: 'pointer', marginRight: '10px', color: 'red' }} />
-                  <Telephone style={{ cursor: 'pointer', marginRight: '10px' }} />
-                  <Mic style={{ cursor: 'pointer', marginRight: '10px' }} />
-                  <JournalText style={{ cursor: 'pointer' }} />
-                </td>
+        <div className="table-responsive">
+          <table className="table table-striped text-center">
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>ID</th>
+                <th>
+                  Nombre 
+                  <ArrowUp onClick={() => requestSort('nombre')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+                  <ArrowDown onClick={() => requestSort('nombre')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+                </th>
+                <th>
+                  Tipo 
+                  <ArrowUp onClick={() => requestSort('tipo')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+                  <ArrowDown onClick={() => requestSort('tipo')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+                </th>
+                <th>
+                  Estado 
+                  <ArrowUp onClick={() => requestSort('socket_id')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+                  <ArrowDown onClick={() => requestSort('socket_id')} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+                </th>
+                <th>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id_usuario}>
+                  <td><img src={`/${user.foto}`} alt={user.nombre} style={{ width: '50px', height: '50px', borderRadius: '50%' }} /></td>
+                  <td>{user.id_usuario}</td>
+                  <td>{user.nombre}</td>
+                  <td>{user.tipo === 'tipo1' ? 'Operador' : 'Conductor'}</td>
+                  <td>
+                    <span style={{ color: user.socket_id ? 'green' : 'red' }}>
+                      ●
+                    </span>
+                  </td>
+                  <td>
+                    <PencilSquare onClick={() => handleEdit(user)} style={{ cursor: 'pointer', marginRight: '10px' }} />
+                    <Trash onClick={() => handleDelete(user.id_usuario)} style={{ cursor: 'pointer', marginRight: '10px', color: 'red' }} />
+                    <Telephone style={{ cursor: 'pointer', marginRight: '10px' }} />
+                    <Mic style={{ cursor: 'pointer', marginRight: '10px' }} />
+                    <JournalText style={{ cursor: 'pointer' }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
