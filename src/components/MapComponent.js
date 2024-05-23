@@ -4,6 +4,7 @@ import { icon } from 'leaflet';
 import axios from 'axios';
 import socket from '../Socket';
 import { Card, Button } from 'react-bootstrap';
+import { BoxSeam, CarFront, Calendar } from 'react-bootstrap-icons';
 import 'leaflet/dist/leaflet.css';
 
 const containerStyle = {
@@ -51,6 +52,13 @@ const snapToRoad = async (latitude, longitude) => {
   }
 };
 
+const formatTime = (seconds) => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${hrs > 0 ? `${hrs}h ` : ''}${mins > 0 ? `${mins}m ` : ''}${secs}s`;
+};
+
 const MapComponent = ({ id_usuario }) => {
   const [location, setLocation] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -86,13 +94,14 @@ const MapComponent = ({ id_usuario }) => {
   };
 
   const handleAccept = async (request, index) => {
-    const acceptTaxiData = {
+    const acceptData = {
       id_viaje: request.viajeId,
-      id_taxista: id_usuario
+      id_taxista: id_usuario,
+      tipo: request.tipo
     };
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/geolocation/accept-taxi-request`, acceptTaxiData);
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/geolocation/accept-taxi-request`, acceptData);
       console.log('Respuesta de la aceptación del taxi:', response.data);
       setShowNotification(true);
       setShowMap(true);
@@ -115,22 +124,22 @@ const MapComponent = ({ id_usuario }) => {
     }
   };
 
-  useEffect(() => {
-    const getRoute = async (origin, destination) => {
-      try {
-        const response = await axios.get(`https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`);
-        if (response.data && response.data.routes.length > 0) {
-          const route = response.data.routes[0].geometry.coordinates.map(coord => ({
-            lat: coord[1],
-            lng: coord[0]
-          }));
-          setRoute(route);
-        }
-      } catch (error) {
-        console.error('Error al obtener la ruta:', error);
+  const getRoute = async (origin, destination) => {
+    try {
+      const response = await axios.get(`https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`);
+      if (response.data && response.data.routes.length > 0) {
+        const route = response.data.routes[0].geometry.coordinates.map(coord => ({
+          lat: coord[1],
+          lng: coord[0]
+        }));
+        setRoute(route);
       }
-    };
+    } catch (error) {
+      console.error('Error al obtener la ruta:', error);
+    }
+  };
 
+  useEffect(() => {
     const handleConnect = () => {
       console.log('Conexión Socket.IO establecida');
     };
@@ -142,40 +151,79 @@ const MapComponent = ({ id_usuario }) => {
     const handleTaxiRequest = (request) => {
       console.log('Solicitud de taxi recibida:', request);
       setPendingRequests((prevRequests) => [
-        ...prevRequests,
-        { ...request, timer: 10 }
+        { ...request, timer: 10, tipo: 'taxi' },
+        ...prevRequests
       ]);
       setShowNotification(false);
     };
 
-    const handleTaxiRequestAccepted = (data) => {
-      console.log("Solicitud de taxi aceptada:", data);
+    const handleDeliveryRequest = (request) => {
+      console.log('Solicitud de delivery recibida:', request);
+      setPendingRequests((prevRequests) => [
+        { ...request, timer: 10, tipo: 'delivery' },
+        ...prevRequests
+      ]);
+      setShowNotification(false);
+    };
+
+    const handleReservationRequest = (request) => {
+      console.log('Solicitud de reserva recibida:', request);
+    
+      // Separar la fecha y la hora en sus componentes
+      const [fecha, hora] = [request.fecha_reserva.split('T')[0], request.hora_reserva.split('-')[0]];
+      const reservationDateTime = new Date(`${fecha}T${hora}`);
+      const twoHoursBefore = new Date(reservationDateTime.getTime() - 2 * 60 * 60 * 1000);
+      console.log(`la reserva es para la ${reservationDateTime}, la hora limite es ${twoHoursBefore}`);
+      const now = new Date();
+      const remainingTime = Math.max((twoHoursBefore - now) / 1000, 0); // tiempo restante en segundos
+    
+      setPendingRequests((prevRequests) => [
+        { ...request, timer: remainingTime, tipo: 'reserva' },
+        ...prevRequests
+      ]);
+      setShowNotification(false);
+    };
+    
+
+    const handleRequestAccepted = (data) => {
+      console.log("Solicitud aceptada:", data);
       setPendingRequests((prevRequests) =>
         prevRequests.filter((request) => request.viajeId !== data.id_viaje)
       );
     };
 
-    const handleAssignedTaxi = (data) => {
-      console.log("Taxista asignado al viaje:", data);
-      setClientInfo({
-        nombre: data.nombre,
-        telefono: data.telefono,
-        direccion: data.direccion,
-        latitud: data.latitud,
-        longitud: data.longitud,
-        direccion_fin: data.direccion_fin,
-        latitud_fin: data.latitud_fin,
-        longitud_fin: data.longitud_fin
-      });
-      setShowClientInfo(true);
-      getRoute({ lat: data.latitud, lng: data.longitud }, { lat: data.latitud_fin, lng: data.longitud_fin });
+    const handleAssigned = (data) => {
+      console.log("Asignado al viaje:", data);
+      // Verificar que todos los valores de latitud y longitud estén definidos
+      if (data.latitud && data.longitud && data.latitud_fin && data.longitud_fin) {
+        setClientInfo({
+          nombre: data.nombre,
+          telefono: data.telefono,
+          direccion: data.direccion,
+          latitud: data.latitud,
+          longitud: data.longitud,
+          direccion_fin: data.direccion_fin,
+          latitud_fin: data.latitud_fin,
+          longitud_fin: data.longitud_fin
+        });
+        setShowClientInfo(true);
+        getRoute({ lat: data.latitud, lng: data.longitud }, { lat: data.latitud_fin, lng: data.longitud_fin });
+      } else {
+        console.error("Información incompleta de la ubicación del cliente o del destino", data);
+      }
     };
 
     socket.on('connect', handleConnect);
     socket.on('connect_error', handleConnectError);
     socket.on('taxiRequest', handleTaxiRequest);
-    socket.on('taxiRequestAccepted', handleTaxiRequestAccepted);
-    socket.on('assignedTaxi', handleAssignedTaxi);
+    socket.on('deliveryRequest', handleDeliveryRequest);
+    socket.on('reservationRequest', handleReservationRequest);
+    socket.on('taxiRequestAccepted', handleRequestAccepted);
+    socket.on('deliveryRequestAccepted', handleRequestAccepted);
+    socket.on('reservationRequestAccepted', handleRequestAccepted);
+    socket.on('assignedTaxi', handleAssigned);
+    socket.on('assignedDelivery', handleAssigned);
+    socket.on('assignedReservation', handleAssigned);
 
     const updateLocation = async () => {
       if ('geolocation' in navigator) {
@@ -215,8 +263,14 @@ const MapComponent = ({ id_usuario }) => {
       socket.off('connect', handleConnect);
       socket.off('connect_error', handleConnectError);
       socket.off('taxiRequest', handleTaxiRequest);
-      socket.off('taxiRequestAccepted', handleTaxiRequestAccepted);
-      socket.off('assignedTaxi', handleAssignedTaxi);
+      socket.off('deliveryRequest', handleDeliveryRequest);
+      socket.off('reservationRequest', handleReservationRequest);
+      socket.off('taxiRequestAccepted', handleRequestAccepted);
+      socket.off('deliveryRequestAccepted', handleRequestAccepted);
+      socket.off('reservationRequestAccepted', handleRequestAccepted);
+      socket.off('assignedTaxi', handleAssigned);
+      socket.off('assignedDelivery', handleAssigned);
+      socket.off('assignedReservation', handleAssigned);
     };
   }, [id_usuario, location, clientInfo, accepted]);
 
@@ -249,7 +303,7 @@ const MapComponent = ({ id_usuario }) => {
       <hr style={{ borderTop: '2px solid gray', width: '100%' }} />
 
       <div className="text-center mt-3">
-        <h3>{accepted ? "Recorrido del viaje" : (pendingRequests.length > 0 ? "Viajes" : "No hay solicitudes de taxis en este momento.")}</h3>
+        <h3>{accepted ? "Recorrido del viaje" : (pendingRequests.length > 0 ? "Solicitudes de Servicio" : "No hay solicitudes de servicio en este momento.")}</h3>
       </div>
 
       {showMap && location && (
@@ -307,11 +361,13 @@ const MapComponent = ({ id_usuario }) => {
         {pendingRequests.map((request, index) => (
           <Card key={index} className="mb-3">
             <Card.Body>
-              <Card.Title>Cliente: {request.name}</Card.Title>
+              <Card.Title>
+                {request.tipo === 'taxi' ? <CarFront /> : request.tipo === 'delivery' ? <BoxSeam /> : <Calendar />} Cliente: {request.name}
+              </Card.Title>
               <Card.Text>Dirección: {request.address}</Card.Text>
-              <Card.Text>Tiempo restante: {request.timer} segundos</Card.Text>
+              <Card.Text>Tiempo restante: {formatTime(request.timer)}</Card.Text>
               <Button variant="primary" onClick={() => handleAccept(request, index)}>
-                Aceptar Viaje
+                Aceptar {request.tipo === 'taxi' ? 'Viaje' : request.tipo === 'delivery' ? 'Domicilio' : 'Reserva'}
               </Button>
             </Card.Body>
           </Card>

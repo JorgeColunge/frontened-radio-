@@ -1,20 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
-import io from 'socket.io-client';
+import socket from '../Socket';
 
-let socket;
 let markers = {}; // Almacenar los marcadores
+let pendingRequests = {}; // Almacenar las solicitudes pendientes
 
 const UsersMap = () => {
     const mapRef = useRef();
     const mapInstance = useRef(null);
+    const [runningAnimations, setRunningAnimations] = useState({}); // Para almacenar el estado de las animaciones
 
     useEffect(() => {
-        // Inicializar Socket.IO
-        socket = io(`${process.env.REACT_APP_API_URL}`);
-
         socket.on('connect', () => {
             console.log('Conexión Socket.IO establecida');
         });
@@ -31,6 +29,75 @@ const UsersMap = () => {
             } else {
                 updateMarkers(updatedLocation);
             }
+        });
+
+        // Escuchar solicitudes de taxi pendientes
+        socket.on('taxiRequestPending', ({ latitude, longitude, range, viajeId }) => {
+            console.log('solicitud en curso', latitude, longitude);
+            clearPendingRequestAnimation(viajeId); // Limpiar cualquier animación previa
+            showPendingRequestAnimation(latitude, longitude, range, viajeId, 'taxi');
+        });
+
+        // Escuchar aceptación de solicitud de taxi
+        socket.on('taxiRequestAccepted', ({ latitude, longitude, viajeId }) => {
+            console.log('solicitud aceptada');
+            changeRequestAnimationColor(viajeId, 'green', '#0f0'); // Cambiar color a verde
+            showAcceptedRequestMarker(latitude, longitude, viajeId);
+            setTimeout(() => clearPendingRequestAnimation(viajeId), 1000); // Mantener la animación 1 segundo adicional
+        });
+
+        // Escuchar rechazo de solicitud de taxi
+        socket.on('taxiRequestRejected', ({ id_viaje, latitude, longitude }) => {
+            console.log('solicitud rechazada');
+            changeRequestAnimationColor(id_viaje, 'red', '#f00'); // Cambiar color a rojo
+            showRejectedRequestMarker(latitude, longitude, id_viaje);
+            setTimeout(() => clearPendingRequestAnimation(id_viaje), 1000); // Mantener la animación 1 segundo adicional
+        });
+
+        // Escuchar solicitudes de delivery pendientes
+        socket.on('deliveryRequestPending', ({ latitude, longitude, range, viajeId }) => {
+            console.log('solicitud de delivery en curso', latitude, longitude);
+            clearPendingRequestAnimation(viajeId); // Limpiar cualquier animación previa
+            showPendingRequestAnimation(latitude, longitude, range, viajeId, 'delivery');
+        });
+
+        // Escuchar aceptación de solicitud de delivery
+        socket.on('deliveryRequestAccepted', ({ latitude, longitude, viajeId }) => {
+            console.log('solicitud de delivery aceptada');
+            changeRequestAnimationColor(viajeId, 'green', '#0f0'); // Cambiar color a verde
+            showAcceptedRequestMarker(latitude, longitude, viajeId);
+            setTimeout(() => clearPendingRequestAnimation(viajeId), 1000); // Mantener la animación 1 segundo adicional
+        });
+
+        // Escuchar rechazo de solicitud de delivery
+        socket.on('deliveryRequestRejected', ({ id_viaje, latitude, longitude }) => {
+            console.log('solicitud de delivery rechazada');
+            changeRequestAnimationColor(id_viaje, 'red', '#f00'); // Cambiar color a rojo
+            showRejectedRequestMarker(latitude, longitude, id_viaje);
+            setTimeout(() => clearPendingRequestAnimation(id_viaje), 1000); // Mantener la animación 1 segundo adicional
+        });
+
+        // Escuchar solicitudes de reserva pendientes
+        socket.on('reservationRequestPending', ({ latitude, longitude, range, viajeId }) => {
+            console.log('solicitud de reserva en curso', latitude, longitude);
+            clearPendingRequestAnimation(viajeId); // Limpiar cualquier animación previa
+            showPendingRequestAnimation(latitude, longitude, range, viajeId, 'reserva');
+        });
+
+        // Escuchar aceptación de solicitud de reserva
+        socket.on('reservationRequestAccepted', ({ latitude, longitude, viajeId }) => {
+            console.log('solicitud de reserva aceptada');
+            changeRequestAnimationColor(viajeId, 'green', '#0f0'); // Cambiar color a verde
+            showAcceptedRequestMarker(latitude, longitude, viajeId);
+            setTimeout(() => clearPendingRequestAnimation(viajeId), 1000); // Mantener la animación 1 segundo adicional
+        });
+
+        // Escuchar rechazo de solicitud de reserva
+        socket.on('reservationRequestRejected', ({ id_viaje, latitude, longitude }) => {
+            console.log('solicitud de reserva rechazada');
+            changeRequestAnimationColor(id_viaje, 'red', '#f00'); // Cambiar color a rojo
+            showRejectedRequestMarker(latitude, longitude, id_viaje);
+            setTimeout(() => clearPendingRequestAnimation(id_viaje), 1000); // Mantener la animación 1 segundo adicional
         });
 
         // Inicializar el mapa solo si aún no ha sido inicializado
@@ -66,26 +133,106 @@ const UsersMap = () => {
         const { id_usuario, latitude, longitude } = location;
         console.log('Actualizando marcador para:', id_usuario, latitude, longitude);
 
-        // Verifica que latitud y longitud sean números
         if (typeof latitude !== 'number' || typeof longitude !== 'number') {
             console.error('Latitud o longitud no son números:', latitude, longitude);
             return;
         }
 
         if (markers[id_usuario]) {
-            // Si el marcador ya existe, actualizar su posición
             markers[id_usuario].setLatLng([latitude, longitude]);
         } else {
-            // Si el marcador no existe, crear uno nuevo y añadirlo al mapa
             const marker = L.marker([latitude, longitude], {
                 icon: L.icon({
-                    iconUrl: '/imagenes/car_topview.svg', // Asegúrate de que la ruta a la imagen es correcta
-                    iconSize: [40, 40], // Dimensiones del icono
-                    iconAnchor: [20, 20], // Anclar el icono al centro
+                    iconUrl: '/imagenes/car_topview.svg',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20],
                 })
             }).addTo(mapInstance.current);
-            markers[id_usuario] = marker; // Guardar el marcador en el diccionario de marcadores
+            markers[id_usuario] = marker;
         }
+    };
+
+    const clearPendingRequestAnimation = (viajeId) => {
+        if (pendingRequests[viajeId]) {
+            if (pendingRequests[viajeId].interval) {
+                clearInterval(pendingRequests[viajeId].interval);
+            }
+            mapInstance.current.removeLayer(pendingRequests[viajeId].circle);
+            delete pendingRequests[viajeId];
+            setRunningAnimations(prev => ({ ...prev, [viajeId]: false }));
+        }
+    };
+
+    const changeRequestAnimationColor = (viajeId, color, fillColor) => {
+        if (pendingRequests[viajeId]) {
+            pendingRequests[viajeId].circle.setStyle({
+                color: fillColor,
+                fillColor: fillColor
+            });
+        }
+    };
+
+    const showPendingRequestAnimation = (latitude, longitude, range, viajeId, tipo) => {
+        clearPendingRequestAnimation(viajeId);
+      
+        const animationRange = tipo === 'reserva' ? 100 : range; // Ajustar el rango de la animación para reservas
+      
+        const circle = L.circle([latitude, longitude], {
+          color: tipo === 'reserva' ? '#ffa500' : '#30f',
+          fillColor: tipo === 'reserva' ? '#ffa500' : '#30f',
+          fillOpacity: 0.5,
+          radius: 0
+        }).addTo(mapInstance.current);
+      
+        const interval = setInterval(async () => {
+          let currentRadius = 0;
+          const animation = setInterval(() => {
+            currentRadius += animationRange / 10; // Hacer la animación más grande para reservas
+            if (currentRadius >= animationRange) {
+              currentRadius = 0;
+            }
+            circle.setRadius(currentRadius);
+          }, 50);
+      
+          try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/check-status/${viajeId}`);
+            if (response.data.estado !== 'pendiente') {
+              clearInterval(animation);
+              setTimeout(() => clearPendingRequestAnimation(viajeId), 500);
+            }
+          } catch (error) {
+            console.error("Error checking request status: ", error);
+          }
+        }, tipo === 'reserva' ? 5 * 60 * 1000 : 1000);
+      
+        pendingRequests[viajeId] = { circle, interval };
+        setRunningAnimations(prev => ({ ...prev, [viajeId]: true }));
+      };
+
+    const showAcceptedRequestMarker = (latitude, longitude, viajeId) => {
+        const marker = L.circle([latitude, longitude], {
+            color: 'green',
+            fillColor: '#0f0',
+            fillOpacity: 0.5,
+            radius: 50
+        }).addTo(mapInstance.current);
+
+        setTimeout(() => {
+            mapInstance.current.removeLayer(marker);
+        }, 3000);
+    };
+
+    const showRejectedRequestMarker = (latitude, longitude, viajeId) => {
+        const marker = L.circle([latitude, longitude], {
+            color: 'red',
+            fillColor: '#f00',
+            fillOpacity: 0.5,
+            radius: 50
+        }).addTo(mapInstance.current);
+
+        setTimeout(() => {
+            mapInstance.current.removeLayer(marker);
+        }, 3000);
     };
 
     return <div ref={mapRef} style={{ height: '500px', width: '100%' }} />;

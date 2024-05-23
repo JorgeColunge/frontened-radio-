@@ -46,6 +46,7 @@ const TaxiRequestForm = () => {
       };
 
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/geolocation/taxi-request`, taxiRequestData);
+      console.log(`${process.env.REACT_APP_API_URL}`)
       setMessage('Solicitud de taxi enviada exitosamente.');
       console.log('Respuesta de la solicitud de taxi:', response.data);
     } catch (error) {
@@ -103,7 +104,7 @@ const TaxiRequestForm = () => {
   const customStyles = {
     control: (base) => ({
       ...base,
-      minHeight: '38px', // Ajusta la altura del Select
+      minHeight: '38px',
       height: '38px',
       display: 'flex',
       alignItems: 'center',
