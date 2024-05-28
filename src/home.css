@@ -55,4 +55,21 @@ body {
         margin-top: 160px;
       }
   }
+
+  .full-screen-map {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background-color: white;
+  }
+
+  .informacionViaje {
+    border: '1px solid gray';
+    padding: '5px';
+    background-color: rgb(251, 251, 251);
+    cursor: pointer;
+  }
   

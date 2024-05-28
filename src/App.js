@@ -8,6 +8,9 @@ import UserPage from "./components/UserPage";
 import UserList from './components/UserList';
 import RequireAuth from './RequireAuth';
 import RedirectAuth from './RedirectAuth';
+import HistoryTrips from './components/HistoryTrips';
+import HistoryTripsUser from './components/HistoryTripsUser';
+import HistoryAllTrips from './components/HistoryAllTrips';
 import socket from './Socket'; // Importa la instancia del socket
 import Layout from './components/Layout';
 
@@ -33,6 +36,9 @@ function App() {
         <Route path="/home" element={<RequireAuth><HomePage /></RequireAuth>} />
         <Route path="/user" element={<RequireAuth><UserPage /></RequireAuth>} />
         <Route path="/users-list" element={<RequireAuth><UserList /></RequireAuth>} />
+        <Route path="/historial-mis-viajes" element={<RequireAuth><HistoryTrips /></RequireAuth>} />
+        <Route path="/history-trips/:id_usuario" element={<RequireAuth><HistoryTripsUser /></RequireAuth>} />
+        <Route path="/historial-viajes" element={<RequireAuth><HistoryAllTrips /></RequireAuth>} />
       </Routes>
     </Router>
   );

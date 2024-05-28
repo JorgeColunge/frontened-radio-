@@ -260,7 +260,9 @@ function UserList() {
                     <Trash onClick={() => handleDelete(user.id_usuario)} style={{ cursor: 'pointer', marginRight: '10px', color: 'red' }} />
                     <Telephone style={{ cursor: 'pointer', marginRight: '10px' }} />
                     <Mic style={{ cursor: 'pointer', marginRight: '10px' }} />
-                    <JournalText style={{ cursor: 'pointer' }} />
+                    <Link to={`/history-trips/${user.id_usuario}`}>
+                      <JournalText style={{ cursor: 'pointer' }} />
+                    </Link>
                   </td>
                 </tr>
               ))}

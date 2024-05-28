@@ -1,3 +1,4 @@
+// src/components/UsersMap.js
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -29,6 +30,12 @@ const UsersMap = () => {
             } else {
                 updateMarkers(updatedLocation);
             }
+        });
+
+        // Escuchar evento de pánico
+        socket.on('panic_event', ({ id_usuario }) => {
+            console.log('Panic event received for user:', id_usuario);
+            showPanicMarker(id_usuario);
         });
 
         // Escuchar solicitudes de taxi pendientes
@@ -115,7 +122,17 @@ const UsersMap = () => {
 
         return () => {
             if (socket) {
-                socket.disconnect(); // Desconectar Socket.IO al desmontar el componente
+                socket.off('locationUpdated');
+                socket.off('panic_event');
+                socket.off('taxiRequestPending');
+                socket.off('taxiRequestAccepted');
+                socket.off('taxiRequestRejected');
+                socket.off('deliveryRequestPending');
+                socket.off('deliveryRequestAccepted');
+                socket.off('deliveryRequestRejected');
+                socket.off('reservationRequestPending');
+                socket.off('reservationRequestAccepted');
+                socket.off('reservationRequestRejected');
             }
         };
     }, []);
@@ -129,7 +146,27 @@ const UsersMap = () => {
         }
     };
 
-    const updateMarkers = (location) => {
+    const fetchDriverInfo = async (id_usuario) => {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/driver-data/${id_usuario}`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching driver info: ", error);
+            return {};
+        }
+    };
+
+    const fetchTripInfo = async (id_viaje) => {
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/trip-info/${id_viaje}`);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching trip info: ", error);
+            return {};
+        }
+    };
+
+    const updateMarkers = async (location) => {
         const { id_usuario, latitude, longitude } = location;
         console.log('Actualizando marcador para:', id_usuario, latitude, longitude);
 
@@ -138,8 +175,16 @@ const UsersMap = () => {
             return;
         }
 
+        const driverInfo = await fetchDriverInfo(id_usuario);
+
         if (markers[id_usuario]) {
-            markers[id_usuario].setLatLng([latitude, longitude]);
+            markers[id_usuario].setLatLng([latitude, longitude]).bindPopup(`
+                <strong>Taxi</strong><br />
+                <strong>Nombre:</strong> ${driverInfo.nombre || 'N/A'}<br />
+                <strong>Placa:</strong> ${driverInfo.placa || 'N/A'}<br />
+                <strong>Teléfono:</strong> ${driverInfo.telefono || 'N/A'}<br />
+                <strong>Navegación:</strong> ${driverInfo.navegacion || 'N/A'}
+            `);
         } else {
             const marker = L.marker([latitude, longitude], {
                 icon: L.icon({
@@ -148,6 +193,15 @@ const UsersMap = () => {
                     iconAnchor: [20, 20],
                 })
             }).addTo(mapInstance.current);
+
+            marker.bindPopup(`
+                <strong>Taxi</strong><br />
+                <strong>Nombre:</strong> ${driverInfo.nombre || 'N/A'}<br />
+                <strong>Placa:</strong> ${driverInfo.placa || 'N/A'}<br />
+                <strong>Teléfono:</strong> ${driverInfo.telefono || 'N/A'}<br />
+                <strong>Navegación:</strong> ${driverInfo.navegacion || 'N/A'}
+            `);
+
             markers[id_usuario] = marker;
         }
     };
@@ -174,65 +228,117 @@ const UsersMap = () => {
 
     const showPendingRequestAnimation = (latitude, longitude, range, viajeId, tipo) => {
         clearPendingRequestAnimation(viajeId);
-      
+
         const animationRange = tipo === 'reserva' ? 100 : range; // Ajustar el rango de la animación para reservas
-      
+
         const circle = L.circle([latitude, longitude], {
-          color: tipo === 'reserva' ? '#ffa500' : '#30f',
-          fillColor: tipo === 'reserva' ? '#ffa500' : '#30f',
-          fillOpacity: 0.5,
-          radius: 0
+            color: tipo === 'reserva' ? '#ffa500' : '#30f',
+            fillColor: tipo === 'reserva' ? '#ffa500' : '#30f',
+            fillOpacity: 0.5,
+            radius: 0
         }).addTo(mapInstance.current);
-      
+
         const interval = setInterval(async () => {
-          let currentRadius = 0;
-          const animation = setInterval(() => {
-            currentRadius += animationRange / 10; // Hacer la animación más grande para reservas
-            if (currentRadius >= animationRange) {
-              currentRadius = 0;
+            let currentRadius = 0;
+            const animation = setInterval(() => {
+                currentRadius += animationRange / 10; // Hacer la animación más grande para reservas
+                if (currentRadius >= animationRange) {
+                    currentRadius = 0;
+                }
+                circle.setRadius(currentRadius);
+            }, 50);
+
+            try {
+                const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/check-status/${viajeId}`);
+                if (response.data.estado !== 'pendiente') {
+                    clearInterval(animation);
+                    setTimeout(() => clearPendingRequestAnimation(viajeId), 500);
+                }
+            } catch (error) {
+                console.error("Error checking request status: ", error);
             }
-            circle.setRadius(currentRadius);
-          }, 50);
-      
-          try {
-            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/check-status/${viajeId}`);
-            if (response.data.estado !== 'pendiente') {
-              clearInterval(animation);
-              setTimeout(() => clearPendingRequestAnimation(viajeId), 500);
-            }
-          } catch (error) {
-            console.error("Error checking request status: ", error);
-          }
         }, tipo === 'reserva' ? 5 * 60 * 1000 : 1000);
-      
+
         pendingRequests[viajeId] = { circle, interval };
         setRunningAnimations(prev => ({ ...prev, [viajeId]: true }));
-      };
+    };
 
-    const showAcceptedRequestMarker = (latitude, longitude, viajeId) => {
-        const marker = L.circle([latitude, longitude], {
-            color: 'green',
-            fillColor: '#0f0',
-            fillOpacity: 0.5,
-            radius: 50
+    const showAcceptedRequestMarker = async (latitude, longitude, viajeId) => {
+        const tripInfo = await fetchTripInfo(viajeId);
+
+        const marker = L.marker([latitude, longitude], {
+            icon: L.icon({
+                iconUrl: '/imagenes/accepted_marker.svg',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+            })
         }).addTo(mapInstance.current);
+
+        marker.bindPopup(`
+            <strong>Viaje Aceptado</strong><br />
+            <strong>Nombre del Cliente:</strong> ${tripInfo.nombre || 'N/A'}<br />
+            <strong>Teléfono:</strong> ${tripInfo.telefono || 'N/A'}<br />
+            <strong>Dirección de Inicio:</strong> ${tripInfo.direccion || 'N/A'}<br />
+            <strong>Dirección de Fin:</strong> ${tripInfo.direccion_fin || 'N/A'}
+        `);
 
         setTimeout(() => {
             mapInstance.current.removeLayer(marker);
         }, 3000);
     };
 
-    const showRejectedRequestMarker = (latitude, longitude, viajeId) => {
-        const marker = L.circle([latitude, longitude], {
-            color: 'red',
-            fillColor: '#f00',
-            fillOpacity: 0.5,
-            radius: 50
+    const showRejectedRequestMarker = async (latitude, longitude, viajeId) => {
+        const tripInfo = await fetchTripInfo(viajeId);
+
+        const marker = L.marker([latitude, longitude], {
+            icon: L.icon({
+                iconUrl: '/imagenes/rejected_marker.svg',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+            })
         }).addTo(mapInstance.current);
+
+        marker.bindPopup(`
+            <strong>Viaje Rechazado</strong><br />
+            <strong>Nombre del Cliente:</strong> ${tripInfo.nombre || 'N/A'}<br />
+            <strong>Teléfono:</strong> ${tripInfo.telefono || 'N/A'}<br />
+            <strong>Dirección de Inicio:</strong> ${tripInfo.direccion || 'N/A'}<br />
+            <strong>Dirección de Fin:</strong> ${tripInfo.direccion_fin || 'N/A'}
+        `);
 
         setTimeout(() => {
             mapInstance.current.removeLayer(marker);
         }, 3000);
+    };
+
+    const showPanicMarker = async (id_usuario) => {
+        const driverInfo = await fetchDriverInfo(id_usuario);
+
+        if (markers[id_usuario]) {
+            const panicIcon = L.divIcon({
+                html: `
+                    <div style="position: relative;">
+                        <img src="/imagenes/car_topview.svg" style="width: 40px; height: 40px;" />
+                        <div style="position: absolute; top: 0; right: 0; background-color: red; border-radius: 50%; padding: 5px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" class="bi bi-exclamation-circle-fill" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM7.002 11a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm.93-4.481-.082.38-.287 1.373-.008.042c-.07.34-.107.466-.154.54a.522.522 0 0 1-.212.21c-.098.057-.19.074-.492.074-.304 0-.397-.02-.498-.077a.517.517 0 0 1-.209-.2c-.051-.08-.084-.193-.159-.546l-.295-1.377-.076-.366C6.437 6.151 6.352 6 6 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C5.352 10 5.437 10.151 6 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366c.071-.294.355-.51.65-.51.292 0 .55.216.63.51l.283 1.333.08.376.287 1.373.076.366c.071.294.355.51.65.51.292 0 .55-.216.63-.51l.283-1.333.08-.376.287-1.373.076-.366C10.563 6.151 10.478 6 10.002 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C8.563 10 8.478 10.151 9 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366C9.563 6.151 9.478 6 9 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C7.437 10 7.352 10.151 8 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366z"/>
+                            </svg>
+                        </div>
+                    </div>
+                `,
+                className: '',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+            });
+
+            markers[id_usuario].setIcon(panicIcon).bindPopup(`
+                <strong>Taxi (¡ALERTA!)</strong><br />
+                <strong>Nombre:</strong> ${driverInfo.nombre || 'N/A'}<br />
+                <strong>Placa:</strong> ${driverInfo.placa || 'N/A'}<br />
+                <strong>Teléfono:</strong> ${driverInfo.telefono || 'N/A'}<br />
+                <strong>Navegación:</strong> ${driverInfo.navegacion || 'N/A'}
+            `).openPopup();
+        }
     };
 
     return <div ref={mapRef} style={{ height: '500px', width: '100%' }} />;
