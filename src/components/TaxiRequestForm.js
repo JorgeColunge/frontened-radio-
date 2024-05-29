@@ -9,8 +9,8 @@ const TaxiRequestForm = () => {
   const [phoneCountry, setPhoneCountry] = useState({ label: '57', value: '57', flag: 'CO' });
   const [startCountry, setStartCountry] = useState({ label: 'Colombia', value: 'CO', flag: 'CO' });
   const [endCountry, setEndCountry] = useState({ label: 'Colombia', value: 'CO', flag: 'CO' });
-  const [startCity, setStartCity] = useState('Pasto');
-  const [endCity, setEndCity] = useState('Pasto');
+  const [startCity, setStartCity] = useState('Ipiales');
+  const [endCity, setEndCity] = useState('Ipiales');
   const [address, setAddress] = useState('');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import axios from 'axios';
-import { Capacitor, Plugins } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import VolumeButtonPlugin from '../VolumeButtonPlugin.ts'; // Ajusta la ruta según sea necesario
 
 const PanicButton = () => {

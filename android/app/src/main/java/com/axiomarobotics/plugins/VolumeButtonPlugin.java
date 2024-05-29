@@ -35,7 +35,7 @@ public class VolumeButtonPlugin extends Plugin {
         final Context context = getContext();
         final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 
-        Bridge.getActivity().getWindow().getDecorView().setOnKeyListener((v, keyCode, event) -> {
+        getBridge().getActivity().getWindow().getDecorView().setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
                 if (!isVolumeButtonPressed) {
                     isVolumeButtonPressed = true;

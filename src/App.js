@@ -23,8 +23,16 @@ function App() {
       socket.emit('registerUser', id_usuario);
     }
 
+    const enableAudioPlayback = () => {
+      document.body.removeEventListener('click', enableAudioPlayback);
+      window.audioPlaybackAllowed = true;
+    };
+
+    document.body.addEventListener('click', enableAudioPlayback);
+
     return () => {
       socket.disconnect();
+      document.body.removeEventListener('click', enableAudioPlayback);
     };
   }, []);
 

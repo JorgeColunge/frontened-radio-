@@ -1,9 +1,9 @@
-// src/components/UsersMap.js
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import socket from '../Socket';
+import { XCircle } from 'react-bootstrap-icons'; // Importa el icono de XCircle
 
 let markers = {}; // Almacenar los marcadores
 let pendingRequests = {}; // Almacenar las solicitudes pendientes
@@ -46,11 +46,11 @@ const UsersMap = () => {
         });
 
         // Escuchar aceptación de solicitud de taxi
-        socket.on('taxiRequestAccepted', ({ latitude, longitude, viajeId }) => {
-            console.log('solicitud aceptada');
-            changeRequestAnimationColor(viajeId, 'green', '#0f0'); // Cambiar color a verde
-            showAcceptedRequestMarker(latitude, longitude, viajeId);
-            setTimeout(() => clearPendingRequestAnimation(viajeId), 1000); // Mantener la animación 1 segundo adicional
+        socket.on('taxiRequestAccepted', ({ latitude, longitude, id_viaje }) => {
+            console.log(`solicitud ${id_viaje} aceptada`);
+            changeRequestAnimationColor(id_viaje, 'green', '#0f0'); // Cambiar color a verde
+            showAcceptedRequestMarker(latitude, longitude, id_viaje);
+            setTimeout(() => clearPendingRequestAnimation(id_viaje), 1000); // Mantener la animación 1 segundo adicional
         });
 
         // Escuchar rechazo de solicitud de taxi
@@ -69,11 +69,11 @@ const UsersMap = () => {
         });
 
         // Escuchar aceptación de solicitud de delivery
-        socket.on('deliveryRequestAccepted', ({ latitude, longitude, viajeId }) => {
+        socket.on('deliveryRequestAccepted', ({ latitude, longitude, id_viaje }) => {
             console.log('solicitud de delivery aceptada');
-            changeRequestAnimationColor(viajeId, 'green', '#0f0'); // Cambiar color a verde
-            showAcceptedRequestMarker(latitude, longitude, viajeId);
-            setTimeout(() => clearPendingRequestAnimation(viajeId), 1000); // Mantener la animación 1 segundo adicional
+            changeRequestAnimationColor(id_viaje, 'green', '#0f0'); // Cambiar color a verde
+            showAcceptedRequestMarker(latitude, longitude, id_viaje);
+            setTimeout(() => clearPendingRequestAnimation(id_viaje), 1000); // Mantener la animación 1 segundo adicional
         });
 
         // Escuchar rechazo de solicitud de delivery
@@ -92,11 +92,11 @@ const UsersMap = () => {
         });
 
         // Escuchar aceptación de solicitud de reserva
-        socket.on('reservationRequestAccepted', ({ latitude, longitude, viajeId }) => {
+        socket.on('reservationRequestAccepted', ({ latitude, longitude, id_viaje }) => {
             console.log('solicitud de reserva aceptada');
-            changeRequestAnimationColor(viajeId, 'green', '#0f0'); // Cambiar color a verde
-            showAcceptedRequestMarker(latitude, longitude, viajeId);
-            setTimeout(() => clearPendingRequestAnimation(viajeId), 1000); // Mantener la animación 1 segundo adicional
+            changeRequestAnimationColor(id_viaje, 'green', '#0f0'); // Cambiar color a verde
+            showAcceptedRequestMarker(latitude, longitude, id_viaje);
+            setTimeout(() => clearPendingRequestAnimation(id_viaje), 1000); // Mantener la animación 1 segundo adicional
         });
 
         // Escuchar rechazo de solicitud de reserva
@@ -109,7 +109,7 @@ const UsersMap = () => {
 
         // Inicializar el mapa solo si aún no ha sido inicializado
         if (!mapInstance.current) {
-            mapInstance.current = L.map(mapRef.current).setView([1.2146412737375492, -77.27825044479697], 15);
+            mapInstance.current = L.map(mapRef.current).setView([0.8287887653825872, -77.64242518449842], 15); // Centrar el mapa en la ubicación deseada
 
             // Añadir capa de OpenStreetMap
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -159,6 +159,7 @@ const UsersMap = () => {
     const fetchTripInfo = async (id_viaje) => {
         try {
             const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/trip-info/${id_viaje}`);
+            console.log(response.data);
             return response.data;
         } catch (error) {
             console.error("Error fetching trip info: ", error);
@@ -226,6 +227,15 @@ const UsersMap = () => {
         }
     };
 
+    const rejectRequest = async (viajeId) => {
+        try {
+            await axios.post(`${process.env.REACT_APP_API_URL}/api/geolocation/reject-taxi-request`, { id_viaje: viajeId });
+            clearPendingRequestAnimation(viajeId);
+        } catch (error) {
+            console.error("Error rejecting trip: ", error);
+        }
+    };
+
     const showPendingRequestAnimation = (latitude, longitude, range, viajeId, tipo) => {
         clearPendingRequestAnimation(viajeId);
 
@@ -237,6 +247,17 @@ const UsersMap = () => {
             fillOpacity: 0.5,
             radius: 0
         }).addTo(mapInstance.current);
+
+        fetchTripInfo(viajeId).then(tripInfo => {
+            circle.bindPopup(`
+                <strong>Solicitud Pendiente</strong><br />
+                <strong>Nombre del Cliente:</strong> ${tripInfo.nombre_cliente || 'N/A'}<br />
+                <strong>Teléfono:</strong> ${tripInfo.telefono_cliente || 'N/A'}<br />
+                <strong>Dirección de Inicio:</strong> ${tripInfo.direccion || 'N/A'}<br />
+                <strong>Dirección de Fin:</strong> ${tripInfo.direccion_fin || 'N/A'}<br />
+                <!-- <button onclick="window.rejectRequest('${viajeId}')" class="btn btn-outline-danger btn-sm mt-2"><XCircle /> Rechazar</button> -->
+            `).openPopup();
+        });
 
         const interval = setInterval(async () => {
             let currentRadius = 0;
@@ -252,7 +273,7 @@ const UsersMap = () => {
                 const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/geolocation/check-status/${viajeId}`);
                 if (response.data.estado !== 'pendiente') {
                     clearInterval(animation);
-                    setTimeout(() => clearPendingRequestAnimation(viajeId), 500);
+                    clearPendingRequestAnimation(viajeId);
                 }
             } catch (error) {
                 console.error("Error checking request status: ", error);
@@ -264,23 +285,23 @@ const UsersMap = () => {
     };
 
     const showAcceptedRequestMarker = async (latitude, longitude, viajeId) => {
+        console.log(`viaje ${viajeId} aceptado`)
         const tripInfo = await fetchTripInfo(viajeId);
 
-        const marker = L.marker([latitude, longitude], {
-            icon: L.icon({
-                iconUrl: '/imagenes/accepted_marker.svg',
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
-            })
+        const marker = L.circleMarker([latitude, longitude], {
+            color: '#0f0',
+            fillColor: '#0f0',
+            fillOpacity: 0.5,
+            radius: 20
         }).addTo(mapInstance.current);
 
         marker.bindPopup(`
             <strong>Viaje Aceptado</strong><br />
-            <strong>Nombre del Cliente:</strong> ${tripInfo.nombre || 'N/A'}<br />
-            <strong>Teléfono:</strong> ${tripInfo.telefono || 'N/A'}<br />
+            <strong>Nombre del Cliente:</strong> ${tripInfo.nombre_cliente || 'N/A'}<br />
+            <strong>Teléfono:</strong> ${tripInfo.telefono_cliente || 'N/A'}<br />
             <strong>Dirección de Inicio:</strong> ${tripInfo.direccion || 'N/A'}<br />
             <strong>Dirección de Fin:</strong> ${tripInfo.direccion_fin || 'N/A'}
-        `);
+        `).openPopup();
 
         setTimeout(() => {
             mapInstance.current.removeLayer(marker);
@@ -290,21 +311,20 @@ const UsersMap = () => {
     const showRejectedRequestMarker = async (latitude, longitude, viajeId) => {
         const tripInfo = await fetchTripInfo(viajeId);
 
-        const marker = L.marker([latitude, longitude], {
-            icon: L.icon({
-                iconUrl: '/imagenes/rejected_marker.svg',
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
-            })
+        const marker = L.circleMarker([latitude, longitude], {
+            color: '#f00',
+            fillColor: '#f00',
+            fillOpacity: 0.5,
+            radius: 20
         }).addTo(mapInstance.current);
 
         marker.bindPopup(`
             <strong>Viaje Rechazado</strong><br />
-            <strong>Nombre del Cliente:</strong> ${tripInfo.nombre || 'N/A'}<br />
-            <strong>Teléfono:</strong> ${tripInfo.telefono || 'N/A'}<br />
+            <strong>Nombre del Cliente:</strong> ${tripInfo.nombre_cliente || 'N/A'}<br />
+            <strong>Teléfono:</strong> ${tripInfo.telefono_cliente || 'N/A'}<br />
             <strong>Dirección de Inicio:</strong> ${tripInfo.direccion || 'N/A'}<br />
             <strong>Dirección de Fin:</strong> ${tripInfo.direccion_fin || 'N/A'}
-        `);
+        `).openPopup();
 
         setTimeout(() => {
             mapInstance.current.removeLayer(marker);
@@ -321,7 +341,7 @@ const UsersMap = () => {
                         <img src="/imagenes/car_topview.svg" style="width: 40px; height: 40px;" />
                         <div style="position: absolute; top: 0; right: 0; background-color: red; border-radius: 50%; padding: 5px;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" class="bi bi-exclamation-circle-fill" viewBox="0 0 16 16">
-                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM7.002 11a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm.93-4.481-.082.38-.287 1.373-.008.042c-.07.34-.107.466-.154.54a.522.522 0 0 1-.212.21c-.098.057-.19.074-.492.074-.304 0-.397-.02-.498-.077a.517.517 0 0 1-.209-.2c-.051-.08-.084-.193-.159-.546l-.295-1.377-.076-.366C6.437 6.151 6.352 6 6 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C5.352 10 5.437 10.151 6 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366c.071-.294.355-.51.65-.51.292 0 .55.216.63.51l.283 1.333.08.376.287 1.373.076.366c.071.294.355.51.65.51.292 0 .55-.216.63-.51l.283-1.333.08-.376.287-1.373.076-.366C10.563 6.151 10.478 6 10.002 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C8.563 10 8.478 10.151 9 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366C9.563 6.151 9.478 6 9 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C7.437 10 7.352 10.151 8 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366z"/>
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM7.002 11a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm.93-4.481-.082.38-.287 1.373-.008.042c-.07.34-.107.466-.154.54a.522.522 0 0 1-.212.21c-.098.057-.19.074-.492.074-.304 0-.397-.02-.498-.077a.517.517 0 0 1-.209-.2c-.051-.08-.084-.193-.159-.546l-.295-1.377-.076-.366C6.437 6.151 6.352 6 6 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C5.352 10 5.437 10.151 6 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366c.071-.294.355-.51.65-.51.292 0 .55.216.63.51l.283 1.333.08.376.287 1.373.076.366c.071.294.355.51.65.51.292 0 .55-.216.63-.51l.283-1.333.08-.376.287-1.373.076-.366C10.563 6.151 10.478 6 10.002 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076.366C8.563 10 8.478 10.151 9 10c.294 0 .529-.216.6-.51l.283-1.333.08-.376.287-1.373.076-.366C9.563 6.151 9.478 6 9 6c-.294 0-.529.216-.6.51l-.283 1.333-.08.376-.287 1.373-.076-.366z"/>
                             </svg>
                         </div>
                     </div>
@@ -340,6 +360,9 @@ const UsersMap = () => {
             `).openPopup();
         }
     };
+
+    // Exponer la función de rechazo para su uso en el popup
+    window.rejectRequest = rejectRequest;
 
     return <div ref={mapRef} style={{ height: '500px', width: '100%' }} />;
 };

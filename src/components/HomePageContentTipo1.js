@@ -4,13 +4,31 @@ import socket from '../Socket';
 import TaxiRequestForm from './TaxiRequestForm';
 import ReservationRequestForm from './ReservationRequestForm';
 import DeliveryRequestForm from './DeliveryRequestForm';
-import { CarFront, CalendarCheck, BoxSeam } from 'react-bootstrap-icons'; // Importa los íconos necesarios
+import { CarFront, CalendarCheck, BoxSeam } from 'react-bootstrap-icons';
+import AudioRecorderButton from './AudioRecorderButton';
 
 const HomePageContentTipo1 = () => {
   const [activeForm, setActiveForm] = useState('taxi'); // Estado para gestionar el formulario activo
 
   useEffect(() => {
     console.log('Socket conectado en HomePage:', socket.connected);
+
+    const handleNewAudio = ({ audioUrl }) => {
+      const fullAudioUrl = `${process.env.REACT_APP_API_URL}${audioUrl}`;
+      console.log(fullAudioUrl);
+      if (window.audioPlaybackAllowed) {
+        const audio = new Audio(fullAudioUrl);
+        audio.play();
+      }
+    };
+
+    socket.on('new-audio', handleNewAudio);
+    socket.on('new-audio-tipo2', handleNewAudio);
+
+    return () => {
+      socket.off('new-audio', handleNewAudio);
+      socket.off('new-audio-tipo2', handleNewAudio);
+    };
   }, []);
 
   const renderForm = () => {
@@ -59,6 +77,7 @@ const HomePageContentTipo1 = () => {
         </div>
         
       </div>
+      <AudioRecorderButton />
     </div>
   );
 };

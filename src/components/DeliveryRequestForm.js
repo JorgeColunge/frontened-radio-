@@ -9,8 +9,8 @@ const DeliveryRequestForm = () => {
   const [phoneCountry, setPhoneCountry] = useState({ label: '57', value: '57', flag: 'CO' });
   const [pickupCountry, setPickupCountry] = useState({ label: 'Colombia', value: 'CO', flag: 'CO' });
   const [deliveryCountry, setDeliveryCountry] = useState({ label: 'Colombia', value: 'CO', flag: 'CO' });
-  const [pickupCity, setPickupCity] = useState('Pasto');
-  const [deliveryCity, setDeliveryCity] = useState('Pasto');
+  const [pickupCity, setPickupCity] = useState('Ipiales');
+  const [deliveryCity, setDeliveryCity] = useState('Ipiales');
   const [pickupAddress, setPickupAddress] = useState('');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
